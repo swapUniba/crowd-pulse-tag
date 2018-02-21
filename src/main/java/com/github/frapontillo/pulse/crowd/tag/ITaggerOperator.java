@@ -114,7 +114,7 @@ public abstract class ITaggerOperator implements Observable.Operator<Message, Me
     /**
      * Generic configuration for tagger.
      */
-    interface GenericTaggerConfig {
+    public interface GenericTaggerConfig {
 
         /**
          * Tag of all messages coming from the stream.
