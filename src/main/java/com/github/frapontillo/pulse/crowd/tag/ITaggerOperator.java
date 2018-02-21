@@ -4,6 +4,8 @@ import com.github.frapontillo.pulse.crowd.data.entity.Message;
 import com.github.frapontillo.pulse.crowd.data.entity.Tag;
 import com.github.frapontillo.pulse.rx.PulseSubscriber;
 import com.github.frapontillo.pulse.spi.IPlugin;
+import com.github.frapontillo.pulse.util.PulseLogger;
+import org.apache.logging.log4j.Logger;
 import rx.Observable;
 import rx.Subscriber;
 
@@ -14,9 +16,16 @@ import java.util.List;
  */
 public abstract class ITaggerOperator implements Observable.Operator<Message, Message> {
     private IPlugin plugin;
+    private GenericTaggerConfig config;
+    private final static Logger logger = PulseLogger.getLogger(ITaggerOperator.class);
+
 
     public ITaggerOperator(IPlugin plugin) {
         this.plugin = plugin;
+    }
+
+    public void setConfig(GenericTaggerConfig config) {
+        this.config = config;
     }
 
     @Override public Subscriber<? super Message> call(Subscriber<? super Message> subscriber) {
@@ -66,7 +75,28 @@ public abstract class ITaggerOperator implements Observable.Operator<Message, Me
      * @return The tagged input {@link Message}.
      */
     public Message tagMessage(Message message) {
-        List<Tag> tags = getTags(message.getText(), message.getLanguage());
+        List<Tag> tags;
+        if (config != null) {
+            switch (config.getCalculate()) {
+                case GenericTaggerConfig.ALL:
+                    tags = getTags(message.getText(), message.getLanguage());
+                    message.addTags(tags);
+                    break;
+                case GenericTaggerConfig.NEW:
+                    if (message.getTags() == null || message.getTags().size() == 0) {
+                        tags = getTags(message.getText(), message.getLanguage());
+                        message.addTags(tags);
+                    } else {
+                        logger.info("Message skipped (tags already exist)");
+                    }
+                    break;
+                default:
+                    tags = getTags(message.getText(), message.getLanguage());
+                    message.addTags(tags);
+                    break;
+            }
+        }
+        tags = getTags(message.getText(), message.getLanguage());
         message.addTags(tags);
         return message;
     }
@@ -81,4 +111,22 @@ public abstract class ITaggerOperator implements Observable.Operator<Message, Me
      */
     protected abstract List<Tag> getTagsImpl(String text, String language);
 
+    /**
+     * Generic configuration for tagger.
+     */
+    interface GenericTaggerConfig {
+
+        /**
+         * Tag of all messages coming from the stream.
+         */
+        public static final String ALL = "all";
+
+        /**
+         * Tag the messages with no tags (property is null or array is empty).
+         */
+        public static final String NEW = "new";
+
+        public String getCalculate();
+        public String setCalculate();
+    }
 }
