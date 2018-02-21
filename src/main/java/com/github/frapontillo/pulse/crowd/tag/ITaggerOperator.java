@@ -95,9 +95,10 @@ public abstract class ITaggerOperator implements Observable.Operator<Message, Me
                     message.addTags(tags);
                     break;
             }
+        } else {
+            tags = getTags(message.getText(), message.getLanguage());
+            message.addTags(tags);
         }
-        tags = getTags(message.getText(), message.getLanguage());
-        message.addTags(tags);
         return message;
     }
 
